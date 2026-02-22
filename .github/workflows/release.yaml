@@ -1,0 +1,51 @@
+name: Release to GitHub Pages
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Native Git Deployment
+        env:
+          GIT_USER_NAME: "github-actions[bot]"
+          GIT_USER_EMAIL: "github-actions[bot]@users.noreply.github.com"
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 1. Setup Git Identity
+          git config --global user.name "${{ env.GIT_USER_NAME }}"
+          git config --global user.email "${{ env.GIT_USER_EMAIL }}"
+
+          # 2. Enter the build directory
+          cd dist
+
+          # 3. Initialize a fresh repo in the dist folder
+          git init
+          git add -A
+          git commit -m "deploy: system build $(date +'%Y-%m-%d %H:%M:%S')"
+
+          # 4. Force push to the 'live' branch
+          # We construct the URL with the token to authorize the push
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" main:live
