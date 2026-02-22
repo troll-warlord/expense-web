@@ -46,7 +46,7 @@ jobs:
           # 3. Initialize a fresh repo in the dist folder
           git init -b main
           git add -A
-          git commit -m "deploy: system build $(date +'%Y-%m-%d %H:%M:%S')"
+          git commit -m "Deploy: system build $(date +'%Y-%m-%d %H:%M:%S')"
 
           # 4. Force push to the 'live' branch
           # We construct the URL with the token to authorize the push
