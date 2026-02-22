@@ -44,7 +44,7 @@ jobs:
           cd dist
 
           # 3. Initialize a fresh repo in the dist folder
-          git init
+          git init -b main
           git add -A
           git commit -m "deploy: system build $(date +'%Y-%m-%d %H:%M:%S')"
 
