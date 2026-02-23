@@ -166,6 +166,12 @@ const submitAdd = handleSubmit(async (values) => {
               </template>
 
               <template v-else>
+                <span v-if="cat.icon" class="text-base leading-none shrink-0">{{ cat.icon }}</span>
+                <span
+                  v-else-if="cat.color"
+                  class="h-3 w-3 rounded-full shrink-0"
+                  :style="{ backgroundColor: cat.color }"
+                />
                 <span class="flex-1 text-sm text-surface-800">{{ cat.name }}</span>
                 <AppBadge :variant="cat.type === 'income' ? 'income' : 'expense'" size="sm">
                   {{ cat.type }}

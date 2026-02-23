@@ -87,6 +87,8 @@ export interface Category {
   id: string
   name: string
   type: CategoryType
+  icon?: string | null
+  color?: string | null
   is_default: boolean
   created_at: string
   updated_at: string
@@ -160,4 +162,5 @@ export interface TransactionFilters {
   category_id?: string
   payment_method_id?: string
   type?: CategoryType
+  q?: string
 }

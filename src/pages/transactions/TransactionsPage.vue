@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useBreakpoints, breakpointsTailwind } from '@vueuse/core'
+import { ref, computed, watch, onMounted } from 'vue'
+import { useBreakpoints, breakpointsTailwind, useDebounceFn } from '@vueuse/core'
 import { useTransactionStore } from '@/stores/transactions'
 import { useMasterDataStore } from '@/stores/masterData'
 import { transactionsApi } from '@/api/transactions'
@@ -28,6 +28,7 @@ const showFilters = ref(false)
 const bp = useBreakpoints(breakpointsTailwind)
 const isSm = bp.greaterOrEqual('sm')
 const filtersVisible = computed(() => isSm.value || showFilters.value)
+const filterSearch = ref('')
 const filterType = ref('')
 const filterCategory = ref('')
 const filterPaymentMethod = ref('')
@@ -36,6 +37,7 @@ const filterDateTo = ref('')
 
 function buildFilters(): TransactionFilters {
   const f: TransactionFilters = {}
+  if (filterSearch.value) f.q = filterSearch.value
   if (filterType.value) f.type = filterType.value as 'income' | 'expense'
   if (filterCategory.value) f.category_id = filterCategory.value
   if (filterPaymentMethod.value) f.payment_method_id = filterPaymentMethod.value
@@ -49,6 +51,7 @@ async function applyFilters() {
 }
 
 function resetFilters() {
+  filterSearch.value = ''
   filterType.value = ''
   filterCategory.value = ''
   filterPaymentMethod.value = ''
@@ -57,9 +60,14 @@ function resetFilters() {
   txnStore.fetchTransactions({})
 }
 
+// Debounced live search — fires 400 ms after the user stops typing
+const debouncedSearch = useDebounceFn(() => applyFilters(), 400)
+watch(filterSearch, () => debouncedSearch())
+
 // Count active filters for the badge
 const activeFilterCount = computed(() => {
   let n = 0
+  if (filterSearch.value) n++
   if (filterType.value) n++
   if (filterCategory.value) n++
   if (filterPaymentMethod.value) n++
@@ -226,7 +234,14 @@ onMounted(() => txnStore.fetchTransactions({}))
           v-show="filtersVisible"
           class="bg-white rounded-xl border border-surface-100 p-4 shadow-sm"
         >
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <!-- Search spans full width on mobile, 2 cols on sm, 3 cols on lg -->
+            <AppInput
+              v-model="filterSearch"
+              placeholder="Search description…"
+              class="sm:col-span-2 lg:col-span-3"
+              @keydown.enter="applyFilters"
+            />
             <AppSelect v-model="filterType">
               <option value="">All Types</option>
               <option value="income">Income</option>
@@ -236,7 +251,7 @@ onMounted(() => txnStore.fetchTransactions({}))
             <AppSelect v-model="filterCategory">
               <option value="">All Categories</option>
               <option v-for="c in masterData.categories" :key="c.id" :value="c.id">
-                {{ c.name }}
+                {{ c.icon ? c.icon + ' ' : '' }}{{ c.name }}
               </option>
             </AppSelect>
 

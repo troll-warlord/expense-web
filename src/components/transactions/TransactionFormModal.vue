@@ -114,12 +114,12 @@ const onSubmit = handleSubmit(async (values) => {
         <option value="" disabled>Select category</option>
         <optgroup label="Income">
           <option v-for="c in masterData.incomeCategories" :key="c.id" :value="c.id">
-            {{ c.name }}
+            {{ c.icon ? c.icon + ' ' : '' }}{{ c.name }}
           </option>
         </optgroup>
         <optgroup label="Expense">
           <option v-for="c in masterData.expenseCategories" :key="c.id" :value="c.id">
-            {{ c.name }}
+            {{ c.icon ? c.icon + ' ' : '' }}{{ c.name }}
           </option>
         </optgroup>
       </AppSelect>
