@@ -19,12 +19,18 @@ export interface ApiErrorResponse {
 
 // ─── Pagination ────────────────────────────────────────────────────────────────
 
-export interface PaginatedResponse<T> {
-  items: T[]
+export interface PaginationMeta {
   total: number
   page: number
   page_size: number
-  pages: number
+  total_pages: number
+}
+
+export interface PaginatedResponse<T> {
+  success: boolean
+  message: string
+  data: T[]
+  meta: PaginationMeta
 }
 
 // ─── Auth ──────────────────────────────────────────────────────────────────────
@@ -32,6 +38,9 @@ export interface PaginatedResponse<T> {
 export interface TokenPair {
   access_token: string
   refresh_token: string
+  token_type: string
+  is_new_user: boolean
+  user: User
 }
 
 export interface RequestOtpPayload {
@@ -46,9 +55,8 @@ export interface VerifyOtpPayload {
   device_hint?: string
 }
 
-export interface VerifyOtpResponse extends TokenPair {
-  is_new_user: boolean
-}
+/** Alias kept for API compatibility — same shape as TokenPair */
+export type VerifyOtpResponse = TokenPair
 
 export interface RefreshPayload {
   refresh_token: string
@@ -87,8 +95,6 @@ export interface Category {
   id: string
   name: string
   type: CategoryType
-  icon?: string | null
-  color?: string | null
   is_default: boolean
   created_at: string
   updated_at: string
@@ -126,10 +132,10 @@ export interface UpdatePaymentMethodPayload {
 
 export interface Transaction {
   id: string
+  user_id: string
   amount: number
   date: string
   description?: string
-  source?: string
   category_id: string
   payment_method_id: string
   created_at: string
@@ -142,7 +148,6 @@ export interface CreateTransactionPayload {
   category_id: string
   payment_method_id: string
   description?: string
-  source?: string
 }
 
 export interface UpdateTransactionPayload {
@@ -151,7 +156,6 @@ export interface UpdateTransactionPayload {
   category_id?: string
   payment_method_id?: string
   description?: string
-  source?: string
 }
 
 export interface TransactionFilters {

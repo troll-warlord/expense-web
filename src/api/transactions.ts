@@ -7,10 +7,11 @@ import type {
   UpdateTransactionPayload,
   TransactionFilters,
 } from '@/types'
+// ApiResponse kept for other endpoints
 
 export const transactionsApi = {
   list(filters: TransactionFilters = {}) {
-    return api.get<ApiResponse<PaginatedResponse<Transaction>>>('/transactions', {
+    return api.get<PaginatedResponse<Transaction>>('/transactions', {
       params: filters,
     })
   },

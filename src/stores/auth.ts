@@ -35,7 +35,7 @@ export const useAuthStore = defineStore('auth', () => {
     const { data: res } = await authApi.verifyOtp({ country_code, phone_number, otp })
     if (!res.success) throw new Error(res.message)
     setTokens(res.data.access_token, res.data.refresh_token)
-    await fetchUser()
+    user.value = res.data.user
     return { is_new_user: res.data.is_new_user }
   }
 

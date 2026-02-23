@@ -119,7 +119,7 @@ async function exportCSV() {
   try {
     const res = await transactionsApi.list({ ...buildFilters(), page_size: 500 })
     if (!res.data.success) return
-    const txns = (res.data.data as unknown as Transaction[]).map((t) => ({
+    const txns = res.data.data.map((t) => ({
       ...t,
       amount: Number(t.amount),
     }))

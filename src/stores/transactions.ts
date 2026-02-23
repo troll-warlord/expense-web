@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { transactionsApi } from '@/api/transactions'
 import type {
   Transaction,
+  PaginatedResponse,
   CreateTransactionPayload,
   UpdateTransactionPayload,
   TransactionFilters,
@@ -30,12 +31,9 @@ export const useTransactionStore = defineStore('transactions', () => {
         page_size: pageSize.value,
       })
       if (res.success) {
-        // API returns a flat array, not a paginated envelope
-        const raw = res.data as unknown as Transaction[]
-        items.value = raw.map((t) => ({ ...t, amount: Number(t.amount) }))
-        // Infer whether more pages exist from whether we got a full page
-        pages.value = items.value.length >= pageSize.value ? page.value + 1 : page.value
-        total.value = (page.value - 1) * pageSize.value + items.value.length
+        items.value = res.data.map((t) => ({ ...t, amount: Number(t.amount) }))
+        total.value = res.meta.total
+        pages.value = res.meta.total_pages
       }
     } finally {
       loading.value = false
