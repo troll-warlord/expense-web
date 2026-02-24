@@ -309,10 +309,10 @@ const mockBars = [38, 56, 42, 70, 50, 64, 48]
                 v-model="otpVal"
                 type="text"
                 inputmode="numeric"
-                placeholder="123456"
+                placeholder="• • • • • •"
                 maxlength="6"
                 autocomplete="one-time-code"
-                class="w-full h-12 rounded-xl border px-4 focus:outline-none transition-all text-white text-center font-bold text-xl"
+                class="w-full h-12 rounded-xl border px-4 focus:outline-none transition-all text-white text-center font-bold text-xl placeholder:tracking-normal placeholder:text-base"
                 style="letter-spacing: 0.4em"
                 :style="otpErr
                   ? 'background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.5)'
