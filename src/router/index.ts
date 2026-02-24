@@ -82,7 +82,10 @@ router.beforeEach(async (to, _from) => {
   const requiresAuth = to.meta.requiresAuth !== false
 
   if (requiresAuth && !authStore.isAuthenticated) {
-    return { name: 'Login', query: { redirect: to.fullPath } }
+    // Use to.path (not to.fullPath) to avoid encoding existing query params into
+    // the redirect value, which causes exponential URL growth on each page refresh
+    // (especially on GitHub Pages where 404.html re-encodes the full URL).
+    return { name: 'Login', query: { redirect: to.path } }
   }
 
   if (to.name === 'Login' && authStore.isAuthenticated) {
