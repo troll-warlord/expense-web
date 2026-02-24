@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { RouterView } from 'vue-router'
+import AppErrorBoundary from '@/components/ui/AppErrorBoundary.vue'
 import ToastContainer from '@/components/ui/ToastContainer.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import { useToast } from '@/composables/useToast'
@@ -21,7 +22,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <RouterView />
-  <ToastContainer />
-  <ConfirmDialog />
+  <AppErrorBoundary>
+    <RouterView />
+    <ToastContainer />
+    <ConfirmDialog />
+  </AppErrorBoundary>
 </template>

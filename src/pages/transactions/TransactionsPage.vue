@@ -15,6 +15,7 @@ import AppIconButton from '@/components/ui/AppIconButton.vue'
 import AppPagination from '@/components/ui/AppPagination.vue'
 import AppSelect from '@/components/ui/AppSelect.vue'
 import AppInput from '@/components/ui/AppInput.vue'
+import AppEmptyState from '@/components/ui/AppEmptyState.vue'
 import TransactionFormModal from '@/components/transactions/TransactionFormModal.vue'
 import type { Transaction, TransactionFilters } from '@/types'
 
@@ -117,35 +118,15 @@ const exportLoading = ref(false)
 async function exportCSV() {
   exportLoading.value = true
   try {
-    const res = await transactionsApi.list({ ...buildFilters(), page_size: 500 })
-    if (!res.data.success) return
-    const txns = res.data.data.map((t) => ({
-      ...t,
-      amount: Number(t.amount),
-    }))
-
-    const headers = ['Date', 'Description', 'Category', 'Type', 'Payment Method', 'Amount']
-    const rows = txns.map((t) => [
-      t.date,
-      t.description ?? '',
-      masterData.getCategoryById(t.category_id)?.name ?? '',
-      masterData.getCategoryById(t.category_id)?.type ?? '',
-      masterData.getPaymentMethodById(t.payment_method_id)?.name ?? '',
-      t.amount.toFixed(2),
-    ])
-
-    const csv = [headers, ...rows]
-      .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','))
-      .join('\n')
-
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const res = await transactionsApi.export(buildFilters())
+    const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
     a.download = `transactions-${new Date().toISOString().split('T')[0]}.csv`
     a.click()
     URL.revokeObjectURL(url)
-    toast.success(`Exported ${txns.length} transactions`)
+    toast.success('Export downloaded')
   } catch (e) {
     toast.error(extractErrorMessage(e))
   } finally {
@@ -306,11 +287,21 @@ onMounted(() => txnStore.fetchTransactions({}))
               </div>
             </div>
 
-            <div
-              v-else-if="txnStore.items.length === 0"
-              class="text-center py-16 text-surface-400 text-sm"
-            >
-              No transactions found. Try adjusting your filters.
+            <div v-else-if="txnStore.items.length === 0">
+              <AppEmptyState
+                v-if="activeFilterCount === 0"
+                title="No transactions yet"
+                description="Start tracking your income and expenses by adding your first transaction."
+              >
+                <AppButton @click="openAdd">Add Transaction</AppButton>
+              </AppEmptyState>
+              <AppEmptyState
+                v-else
+                title="No results"
+                description="No transactions match your current filters."
+              >
+                <AppButton variant="ghost" size="sm" @click="resetFilters">Clear Filters</AppButton>
+              </AppEmptyState>
             </div>
 
             <template v-else>

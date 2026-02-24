@@ -168,3 +168,24 @@ export interface TransactionFilters {
   type?: CategoryType
   q?: string
 }
+
+export interface CategorySummary {
+  category_id: string
+  name: string
+  type: CategoryType
+  total: number
+  count: number
+}
+
+export interface TransactionSummary {
+  total_income: number
+  total_expense: number
+  net: number
+  transaction_count: number
+  category_breakdown: CategorySummary[]
+}
+
+export interface SummaryFilters {
+  date_from?: string
+  date_to?: string
+}

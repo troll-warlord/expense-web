@@ -6,9 +6,10 @@ import { useMasterDataStore } from '@/stores/masterData'
 import AppShell from '@/components/layout/AppShell.vue'
 import AppSpinner from '@/components/ui/AppSpinner.vue'
 import AppSkeleton from '@/components/ui/AppSkeleton.vue'
+import AppEmptyState from '@/components/ui/AppEmptyState.vue'
 import { useToast } from '@/composables/useToast'
 import { formatCurrency, formatDate, extractErrorMessage } from '@/utils'
-import type { Transaction } from '@/types'
+import type { Transaction, TransactionSummary } from '@/types'
 import { RouterLink } from 'vue-router'
 
 const toast = useToast()
@@ -105,7 +106,9 @@ function getMonthBuckets(from: string, to: string) {
 // ─── State ────────────────────────────────────────────────────────────────────
 const loading = ref(true)
 const chartsLoading = ref(false)
-const chartTransactions = ref<Transaction[]>([])
+const periodSummary = ref<TransactionSummary | null>(null)
+const prevSummary = ref<TransactionSummary | null>(null)
+const pmTransactions = ref<Transaction[]>([])
 const recentTransactions = ref<Transaction[]>([])
 const barData = ref<{ months: string[]; income: number[]; expense: number[] }>({
   months: [],
@@ -114,17 +117,9 @@ const barData = ref<{ months: string[]; income: number[]; expense: number[] }>({
 })
 
 // ─── Summary Computeds ─────────────────────────────────────────────────────────
-const totalIncome = computed(() =>
-  chartTransactions.value
-    .filter((t) => masterData.getCategoryById(t.category_id)?.type === 'income')
-    .reduce((s, t) => s + t.amount, 0),
-)
-const totalExpense = computed(() =>
-  chartTransactions.value
-    .filter((t) => masterData.getCategoryById(t.category_id)?.type === 'expense')
-    .reduce((s, t) => s + t.amount, 0),
-)
-const netBalance = computed(() => totalIncome.value - totalExpense.value)
+const totalIncome = computed(() => periodSummary.value?.total_income ?? 0)
+const totalExpense = computed(() => periodSummary.value?.total_expense ?? 0)
+const netBalance = computed(() => periodSummary.value?.net ?? 0)
 
 const savingsRate = computed(() =>
   totalIncome.value > 0
@@ -132,34 +127,193 @@ const savingsRate = computed(() =>
     : null,
 )
 
-const topExpenseCategories = computed(() => {
-  const grouped: Record<string, { name: string; amount: number }> = {}
-  for (const t of chartTransactions.value) {
-    const cat = masterData.getCategoryById(t.category_id)
-    if (cat?.type === 'expense') {
-      if (!grouped[cat.id]) grouped[cat.id] = { name: cat.name, amount: 0 }
-      grouped[cat.id]!.amount += t.amount
+// ─── MoM delta helpers ──────────────────────────────────────────────────────────
+function pctChange(cur: number, prev: number): number | null {
+  if (prev === 0) return null
+  return Math.round(((cur - prev) / prev) * 100)
+}
+const incomeDelta = computed(() =>
+  pctChange(totalIncome.value, prevSummary.value?.total_income ?? 0),
+)
+const expenseDelta = computed(() =>
+  pctChange(totalExpense.value, prevSummary.value?.total_expense ?? 0),
+)
+const netDelta = computed(() => pctChange(netBalance.value, prevSummary.value?.net ?? 0))
+
+/** Returns the previous equivalent date range for period-over-period comparison */
+function getPrevDateRange(key: PeriodKey): { from: string; to: string } {
+  const today = new Date()
+  switch (key) {
+    case 'this_month': {
+      const from = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+      const to = new Date(today.getFullYear(), today.getMonth(), 0)
+      return { from: fmtDate(from), to: fmtDate(to) }
+    }
+    case 'last_month': {
+      const from = new Date(today.getFullYear(), today.getMonth() - 2, 1)
+      const to = new Date(today.getFullYear(), today.getMonth() - 1, 0)
+      return { from: fmtDate(from), to: fmtDate(to) }
+    }
+    case '3_months':
+      return {
+        from: fmtDate(new Date(today.getFullYear(), today.getMonth() - 5, 1)),
+        to: fmtDate(new Date(today.getFullYear(), today.getMonth() - 3, 0)),
+      }
+    case '6_months':
+      return {
+        from: fmtDate(new Date(today.getFullYear(), today.getMonth() - 11, 1)),
+        to: fmtDate(new Date(today.getFullYear(), today.getMonth() - 6, 0)),
+      }
+    case 'this_year':
+      return { from: `${today.getFullYear() - 1}-01-01`, to: `${today.getFullYear() - 1}-12-31` }
+    case 'this_fy': {
+      const fyYear = (today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1) - 1
+      return {
+        from: fmtDate(new Date(fyYear, 3, 1)),
+        to: fmtDate(new Date(fyYear + 1, 2, 31)),
+      }
+    }
+    case 'last_fy': {
+      const fyYear = (today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1) - 2
+      return {
+        from: fmtDate(new Date(fyYear, 3, 1)),
+        to: fmtDate(new Date(fyYear + 1, 2, 31)),
+      }
     }
   }
-  return Object.values(grouped)
-    .sort((a, b) => b.amount - a.amount)
+}
+
+const topExpenseCategories = computed(() =>
+  (periodSummary.value?.category_breakdown ?? [])
+    .filter((c) => c.type === 'expense')
+    .sort((a, b) => b.total - a.total)
     .slice(0, 5)
-    .map((e) => ({ ...e, pct: totalExpense.value > 0 ? (e.amount / totalExpense.value) * 100 : 0 }))
+    .map((c) => ({
+      name: c.name,
+      amount: c.total,
+      pct: totalExpense.value > 0 ? (c.total / totalExpense.value) * 100 : 0,
+    }))
+)
+
+const topIncomeCategories = computed(() =>
+  (periodSummary.value?.category_breakdown ?? [])
+    .filter((c) => c.type === 'income')
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 5)
+    .map((c) => ({
+      name: c.name,
+      amount: c.total,
+      pct: totalIncome.value > 0 ? (c.total / totalIncome.value) * 100 : 0,
+    }))
+)
+
+// ─── Quick Stats ──────────────────────────────────────────────────────────────
+const daysInPeriod = computed(() => {
+  const { from, to } = getDateRange(selectedPeriod.value)
+  return (
+    Math.ceil(
+      (new Date(to + 'T00:00:00').getTime() - new Date(from + 'T00:00:00').getTime()) /
+        86_400_000,
+    ) + 1
+  )
 })
 
-const topIncomeCategories = computed(() => {
-  const grouped: Record<string, { name: string; amount: number }> = {}
-  for (const t of chartTransactions.value) {
+const avgDailySpend = computed(() =>
+  totalExpense.value > 0 ? totalExpense.value / daysInPeriod.value : 0,
+)
+
+const biggestExpense = computed(() =>
+  pmTransactions.value
+    .filter((t) => masterData.getCategoryById(t.category_id)?.type === 'expense')
+    .reduce((max, t) => (t.amount > max ? t.amount : max), 0),
+)
+
+const txCount = computed(() => periodSummary.value?.transaction_count ?? 0)
+
+const topExpenseCategoryName = computed(
+  () =>
+    (periodSummary.value?.category_breakdown ?? [])
+      .filter((c) => c.type === 'expense')
+      .sort((a, b) => b.total - a.total)[0]?.name ?? '—',
+)
+
+// ─── Daily Cashflow area chart ────────────────────────────────────────────────
+const dailyCashflowData = computed(() => {
+  const expByDay: Record<string, number> = {}
+  const incByDay: Record<string, number> = {}
+  for (const t of pmTransactions.value) {
+    const day = (t.date as string).split('T')[0]
+    const type = masterData.getCategoryById(t.category_id)?.type
+    if (type === 'expense') expByDay[day] = (expByDay[day] ?? 0) + t.amount
+    if (type === 'income') incByDay[day] = (incByDay[day] ?? 0) + t.amount
+  }
+  const days = [...new Set([...Object.keys(expByDay), ...Object.keys(incByDay)])].sort()
+  const monthNames = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ]
+  const fmt = (d: string) => {
+    const parts = d.split('-')
+    return `${parts[2]} ${monthNames[Number(parts[1]) - 1]}`
+  }
+  return {
+    labels: days.map(fmt),
+    income: days.map((d) => incByDay[d] ?? 0),
+    expense: days.map((d) => expByDay[d] ?? 0),
+  }
+})
+
+const areaOptions = computed(() => ({
+  chart: {
+    type: 'area' as const,
+    height: 260,
+    toolbar: { show: false },
+    zoom: { enabled: false },
+  },
+  series: [
+    { name: 'Income', data: dailyCashflowData.value.income },
+    { name: 'Expense', data: dailyCashflowData.value.expense },
+  ],
+  xaxis: {
+    categories: dailyCashflowData.value.labels,
+    tickAmount: Math.min(dailyCashflowData.value.labels.length, 10),
+    labels: { rotate: -35, style: { fontSize: '11px' } },
+  },
+  yaxis: { labels: { formatter: (v: number) => formatCurrency(v) } },
+  colors: ['#10b981', '#ef4444'],
+  stroke: { curve: 'smooth' as const, width: 2 },
+  fill: { type: 'gradient', gradient: { opacityFrom: 0.35, opacityTo: 0.05 } },
+  dataLabels: { enabled: false },
+  legend: { position: 'top' as const },
+  tooltip: { y: { formatter: (v: number) => formatCurrency(v) } },
+}))
+
+// ─── Day-of-week spending pattern ─────────────────────────────────────────────
+const DOW_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+const dowOptions = computed(() => {
+  const totals = new Array(7).fill(0)
+  const counts = new Array(7).fill(0)
+  for (const t of pmTransactions.value) {
     const cat = masterData.getCategoryById(t.category_id)
-    if (cat?.type === 'income') {
-      if (!grouped[cat.id]) grouped[cat.id] = { name: cat.name, amount: 0 }
-      grouped[cat.id]!.amount += t.amount
+    if (cat?.type === 'expense') {
+      const dow = new Date((t.date as string).split('T')[0] + 'T00:00:00').getDay()
+      totals[dow] += t.amount
+      counts[dow]++
     }
   }
-  return Object.values(grouped)
-    .sort((a, b) => b.amount - a.amount)
-    .slice(0, 5)
-    .map((e) => ({ ...e, pct: totalIncome.value > 0 ? (e.amount / totalIncome.value) * 100 : 0 }))
+  const avgSpend = totals.map((total, i) => (counts[i] > 0 ? Math.round(total / counts[i]) : 0))
+  return {
+    chart: { type: 'bar' as const, height: 260, toolbar: { show: false } },
+    series: [{ name: 'Avg Spend', data: avgSpend }],
+    xaxis: { categories: DOW_LABELS },
+    yaxis: { labels: { formatter: (v: number) => formatCurrency(v) } },
+    colors: ['#f59e0b'],
+    dataLabels: { enabled: false },
+    plotOptions: { bar: { borderRadius: 4, columnWidth: '55%' } },
+    legend: { show: false },
+    tooltip: { y: { formatter: (v: number) => formatCurrency(v) } },
+  }
 })
 
 // ─── Chart Options ─────────────────────────────────────────────────────────────
@@ -185,14 +339,12 @@ const PM_COLORS = [
 ]
 
 const pieOptions = computed(() => {
-  const grouped: Record<string, number> = {}
-  for (const t of chartTransactions.value) {
-    const cat = masterData.getCategoryById(t.category_id)
-    if (cat?.type === 'expense') grouped[cat.name] = (grouped[cat.name] || 0) + t.amount
-  }
+  const expCats = (periodSummary.value?.category_breakdown ?? []).filter(
+    (c) => c.type === 'expense',
+  )
   return {
-    labels: Object.keys(grouped),
-    series: Object.values(grouped),
+    labels: expCats.map((c) => c.name),
+    series: expCats.map((c) => c.total),
     chart: { type: 'donut' as const, height: 300, toolbar: { show: false } },
     legend: { position: 'bottom' as const },
     dataLabels: { enabled: false },
@@ -204,7 +356,7 @@ const pieOptions = computed(() => {
 
 const pmPieOptions = computed(() => {
   const grouped: Record<string, number> = {}
-  for (const t of chartTransactions.value) {
+  for (const t of pmTransactions.value) {
     const cat = masterData.getCategoryById(t.category_id)
     if (cat?.type === 'expense') {
       const pmName = masterData.getPaymentMethodById(t.payment_method_id)?.name ?? 'Unknown'
@@ -250,40 +402,66 @@ async function loadCharts() {
     const { from, to } = getDateRange(selectedPeriod.value)
     const buckets = getMonthBuckets(from, to)
 
-    // One request per month bucket — reuse results for both bar chart and aggregate donuts
-    const bucketResults = await Promise.all(
-      buckets.map((b) =>
-        transactionsApi.list({ date_from: b.from, date_to: b.to, page_size: 500 }),
+    // Three parallel requests:
+    //  1. Per-bucket summary calls → monthly bar chart data
+    //  2. Full-period summary     → summary cards + category donut (server-aggregated, no row cap)
+    //  3. Full-period list        → payment-method donut (capped at 1 000, backend max)
+    //  4. Prev-period summary     → period-over-period delta badges
+    const { from: prevFrom, to: prevTo } = getPrevDateRange(selectedPeriod.value)
+    const [bucketResults, fullSummaryRes, pmRes, prevSummaryRes] = await Promise.all([
+      Promise.all(
+        buckets.map((b) => transactionsApi.summary({ date_from: b.from, date_to: b.to })),
       ),
-    )
+      transactionsApi.summary({ date_from: from, date_to: to }),
+      transactionsApi.list({ date_from: from, date_to: to, page_size: 1000 }),
+      transactionsApi.summary({ date_from: prevFrom, date_to: prevTo }),
+    ])
 
+    // Bar chart
     const months: string[] = []
     const income: number[] = []
     const expense: number[] = []
-    const allTxns: Transaction[] = []
-
     buckets.forEach((b, i) => {
-      const res = bucketResults[i]
-      if (res?.data.success) {
-        const txns = (res.data.data as unknown as Transaction[]).map(toTransaction)
-        allTxns.push(...txns)
+      const data = bucketResults[i]?.data?.data
+      if (data) {
         months.push(b.label)
-        income.push(
-          txns
-            .filter((t) => masterData.getCategoryById(t.category_id)?.type === 'income')
-            .reduce((s, t) => s + t.amount, 0),
-        )
-        expense.push(
-          txns
-            .filter((t) => masterData.getCategoryById(t.category_id)?.type === 'expense')
-            .reduce((s, t) => s + t.amount, 0),
-        )
+        income.push(Number(data.total_income))
+        expense.push(Number(data.total_expense))
       }
     })
-
-    // Donuts and summary cards use the merged set of all bucket transactions
-    chartTransactions.value = allTxns
     barData.value = { months, income, expense }
+
+    // Full-period summary (summary cards + category donut)
+    if (fullSummaryRes.data.success) {
+      const raw = fullSummaryRes.data.data
+      periodSummary.value = {
+        ...raw,
+        total_income: Number(raw.total_income),
+        total_expense: Number(raw.total_expense),
+        net: Number(raw.net),
+        category_breakdown: raw.category_breakdown.map((c) => ({
+          ...c,
+          total: Number(c.total),
+        })),
+      }
+    }
+
+    // Payment-method transactions (PM donut)
+    if (pmRes.data.success) {
+      pmTransactions.value = (pmRes.data.data as unknown as Transaction[]).map(toTransaction)
+    }
+
+    // Previous period summary (delta badges)
+    if (prevSummaryRes.data.success) {
+      const raw = prevSummaryRes.data.data
+      prevSummary.value = {
+        ...raw,
+        total_income: Number(raw.total_income),
+        total_expense: Number(raw.total_expense),
+        net: Number(raw.net),
+        category_breakdown: raw.category_breakdown.map((c) => ({ ...c, total: Number(c.total) })),
+      }
+    }
   } catch (e) {
     toast.error(extractErrorMessage(e))
   } finally {
@@ -337,6 +515,31 @@ onMounted(loadDashboard)
           :key="i"
           class="bg-white rounded-xl border border-surface-100 p-5 shadow-sm space-y-3"
         >
+          <AppSkeleton h="h-4" w="w-40" />
+          <AppSkeleton h="h-3" w="w-28" />
+          <AppSkeleton h="h-56" />
+        </div>
+      </div>
+      <!-- Quick stats -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div
+          v-for="i in 4"
+          :key="i"
+          class="bg-white rounded-xl border border-surface-100 p-4 shadow-sm space-y-2"
+        >
+          <AppSkeleton h="h-3" w="w-24" />
+          <AppSkeleton h="h-6" w="w-32" />
+          <AppSkeleton h="h-3" w="w-20" />
+        </div>
+      </div>
+      <!-- Cashflow + DoW -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="md:col-span-2 bg-white rounded-xl border border-surface-100 p-5 shadow-sm space-y-3">
+          <AppSkeleton h="h-4" w="w-40" />
+          <AppSkeleton h="h-3" w="w-28" />
+          <AppSkeleton h="h-56" />
+        </div>
+        <div class="bg-white rounded-xl border border-surface-100 p-5 shadow-sm space-y-3">
           <AppSkeleton h="h-4" w="w-40" />
           <AppSkeleton h="h-3" w="w-28" />
           <AppSkeleton h="h-56" />
@@ -401,6 +604,14 @@ onMounted(loadDashboard)
             >
           </p>
           <p class="text-2xl font-bold text-income">{{ formatCurrency(totalIncome) }}</p>
+          <p
+            v-if="incomeDelta !== null"
+            class="text-xs"
+            :class="incomeDelta >= 0 ? 'text-income' : 'text-expense'"
+          >
+            {{ incomeDelta >= 0 ? '↑' : '↓' }} {{ Math.abs(incomeDelta) }}%
+            <span class="text-surface-400">vs prev period</span>
+          </p>
         </div>
         <!-- Expense -->
         <div class="bg-white rounded-xl border border-surface-100 p-5 space-y-1 shadow-sm">
@@ -411,6 +622,14 @@ onMounted(loadDashboard)
             >
           </p>
           <p class="text-2xl font-bold text-expense">{{ formatCurrency(totalExpense) }}</p>
+          <p
+            v-if="expenseDelta !== null"
+            class="text-xs"
+            :class="expenseDelta <= 0 ? 'text-income' : 'text-expense'"
+          >
+            {{ expenseDelta >= 0 ? '↑' : '↓' }} {{ Math.abs(expenseDelta) }}%
+            <span class="text-surface-400">vs prev period</span>
+          </p>
         </div>
         <!-- Net Balance -->
         <div class="bg-white rounded-xl border border-surface-100 p-5 space-y-1 shadow-sm">
@@ -422,6 +641,14 @@ onMounted(loadDashboard)
           </p>
           <p class="text-2xl font-bold" :class="netBalance >= 0 ? 'text-income' : 'text-expense'">
             {{ netBalance >= 0 ? '+' : '' }}{{ formatCurrency(netBalance) }}
+          </p>
+          <p
+            v-if="netDelta !== null"
+            class="text-xs"
+            :class="netDelta >= 0 ? 'text-income' : 'text-expense'"
+          >
+            {{ netDelta >= 0 ? '↑' : '↓' }} {{ Math.abs(netDelta) }}%
+            <span class="text-surface-400">vs prev period</span>
           </p>
         </div>
         <!-- Savings Rate -->
@@ -449,8 +676,13 @@ onMounted(loadDashboard)
         </div>
       </div>
 
-      <!-- Charts -->
-      <div class="relative">
+      <!-- Charts: empty state when no transaction data for this period -->
+      <AppEmptyState
+        v-if="!chartsLoading && periodSummary?.transaction_count === 0"
+        title="No transactions for this period"
+        :description="`There are no transactions recorded for ${selectedPeriodLabel}. Add some to see your spending breakdown.`"
+      />
+      <div v-else class="relative">
         <!-- loading overlay on period switch -->
         <div
           v-if="chartsLoading"
@@ -508,7 +740,58 @@ onMounted(loadDashboard)
             </div>
           </div>
         </div>
+
+        <!-- Quick Stats -->
+        <div class="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-white rounded-xl border border-surface-100 p-4 shadow-sm">
+            <p class="text-[11px] font-medium text-surface-500 uppercase tracking-wide mb-1">Avg Daily Spend</p>
+            <p class="text-xl font-bold text-surface-900">{{ formatCurrency(avgDailySpend) }}</p>
+            <p class="text-xs text-surface-400 mt-0.5">over {{ daysInPeriod }} days</p>
+          </div>
+          <div class="bg-white rounded-xl border border-surface-100 p-4 shadow-sm">
+            <p class="text-[11px] font-medium text-surface-500 uppercase tracking-wide mb-1">Transactions</p>
+            <p class="text-xl font-bold text-surface-900">{{ txCount }}</p>
+            <p class="text-xs text-surface-400 mt-0.5">{{ selectedPeriodLabel }}</p>
+          </div>
+          <div class="bg-white rounded-xl border border-surface-100 p-4 shadow-sm">
+            <p class="text-[11px] font-medium text-surface-500 uppercase tracking-wide mb-1">Biggest Expense</p>
+            <p class="text-xl font-bold text-expense">
+              {{ biggestExpense > 0 ? formatCurrency(biggestExpense) : '—' }}
+            </p>
+            <p class="text-xs text-surface-400 mt-0.5">single transaction</p>
+          </div>
+          <div class="bg-white rounded-xl border border-surface-100 p-4 shadow-sm">
+            <p class="text-[11px] font-medium text-surface-500 uppercase tracking-wide mb-1">Top Expense</p>
+            <p class="text-xl font-bold text-surface-900 truncate">{{ topExpenseCategoryName }}</p>
+            <p class="text-xs text-surface-400 mt-0.5">by category</p>
+          </div>
+        </div>
+
+        <!-- Daily Cashflow + Day-of-week -->
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="md:col-span-2 bg-white rounded-xl border border-surface-100 p-5 shadow-sm">
+            <h2 class="text-sm font-semibold text-surface-700 mb-1">Daily Cashflow</h2>
+            <p class="text-xs text-surface-400 mb-4">{{ selectedPeriodLabel }} · income vs expense per day</p>
+            <VueApexCharts
+              type="area"
+              height="260"
+              :options="areaOptions"
+              :series="areaOptions.series"
+            />
+          </div>
+          <div class="bg-white rounded-xl border border-surface-100 p-5 shadow-sm">
+            <h2 class="text-sm font-semibold text-surface-700 mb-1">Spending by Day</h2>
+            <p class="text-xs text-surface-400 mb-4">avg expense per weekday</p>
+            <VueApexCharts
+              type="bar"
+              height="260"
+              :options="dowOptions"
+              :series="dowOptions.series"
+            />
+          </div>
+        </div>
       </div>
+      <!-- /charts -->
 
       <!-- Top Categories -->
       <div class="bg-white rounded-xl border border-surface-100 p-5 shadow-sm">

@@ -59,6 +59,7 @@ export const useAuthStore = defineStore('auth', () => {
     const { data: res } = await authApi.refresh({ refresh_token: refreshToken })
     if (!res.success) throw new Error(res.message)
     setTokens(res.data.access_token, res.data.refresh_token)
+    user.value = res.data.user
   }
 
   async function fetchUser() {
@@ -79,7 +80,6 @@ export const useAuthStore = defineStore('auth', () => {
     if (!refreshToken) return false
     try {
       await refresh()
-      await fetchUser()
       return true
     } catch {
       clearTokens()

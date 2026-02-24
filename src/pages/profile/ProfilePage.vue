@@ -75,17 +75,17 @@ async function handleLogout() {
 
 async function handleDeactivate() {
   const ok = await confirm({
-    title: 'Deactivate Account',
+    title: 'Delete Account',
     message:
-      'This will permanently deactivate your account and all your data. This action cannot be undone. Are you absolutely sure?',
-    confirmLabel: 'Deactivate',
+      'This will permanently delete your account and all your data including transactions, categories, and payment methods. This cannot be undone. Are you absolutely sure?',
+    confirmLabel: 'Delete Account',
     danger: true,
   })
   if (!ok) return
   deleteLoading.value = true
   try {
     await usersApi.deleteMe()
-    toast.success('Account deactivated')
+    toast.success('Account deleted')
     await auth.logout()
   } catch (e) {
     toast.error(extractErrorMessage(e))
@@ -163,8 +163,8 @@ async function handleDeactivate() {
           <div class="bg-white rounded-xl border border-red-200 shadow-sm p-6 space-y-3">
             <h3 class="text-sm font-semibold text-red-600">Danger Zone</h3>
             <p class="text-xs text-surface-500">
-              Deactivating your account will permanently remove all your data including
-              transactions, categories, and payment methods. This cannot be undone.
+              Permanently deletes your account and all data including transactions, categories, and
+              payment methods. This cannot be undone.
             </p>
             <AppButton variant="danger" :loading="deleteLoading" @click="handleDeactivate">
               <svg
@@ -180,7 +180,7 @@ async function handleDeactivate() {
                   d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                 />
               </svg>
-              Deactivate Account
+              Delete Account
             </AppButton>
           </div>
         </div>

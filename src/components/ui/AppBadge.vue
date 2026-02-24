@@ -16,10 +16,10 @@ const classes = computed(() => {
     default: 'bg-surface-100 text-surface-600',
     income: 'bg-income-light text-income',
     expense: 'bg-expense-light text-expense',
-    system: 'bg-primary-50 text-primary-700',
+    system:  'bg-primary-50 text-primary-700',
     success: 'bg-green-100 text-green-700',
     warning: 'bg-yellow-100 text-yellow-700',
-    danger: 'bg-red-100 text-red-700',
+    danger:  'bg-red-100 text-red-700',
   }
   return [base, sizes[props.size], variants[props.variant]]
 })

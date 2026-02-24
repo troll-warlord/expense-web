@@ -28,12 +28,17 @@ const title = computed(() => (isEdit.value ? 'Edit Transaction' : 'Add Transacti
 
 const schema = toTypedSchema(
   z.object({
-    amount: z.coerce.number().positive('Amount must be positive'),
+    amount: z.coerce
+      .number({ invalid_type_error: 'Amount is required' })
+      .positive('Amount must be greater than 0')
+      .refine(
+        (v) => Math.round(v * 100) / 100 === v,
+        'Amount can have at most 2 decimal places',
+      ),
     date: z.string().min(1, 'Date is required'),
     category_id: z.string().min(1, 'Category is required'),
     payment_method_id: z.string().min(1, 'Payment method is required'),
-    description: z.string().optional(),
-    source: z.string().optional(),
+    description: z.string().max(1000, 'Description cannot exceed 1000 characters').optional(),
   }),
 )
 
@@ -45,7 +50,6 @@ const { handleSubmit, resetForm, isSubmitting, setValues } = useForm({
     category_id: '',
     payment_method_id: '',
     description: '',
-    source: '',
   },
 })
 
@@ -53,8 +57,7 @@ const { value: amount, errorMessage: amountErr } = useField<number>('amount')
 const { value: date, errorMessage: dateErr } = useField<string>('date')
 const { value: categoryId, errorMessage: categoryErr } = useField<string>('category_id')
 const { value: paymentMethodId, errorMessage: pmErr } = useField<string>('payment_method_id')
-const { value: description } = useField<string>('description')
-const { value: source } = useField<string>('source')
+const { value: description, errorMessage: descriptionErr } = useField<string>('description')
 
 // Populate form when editing
 watch(
@@ -67,7 +70,6 @@ watch(
         category_id: t.category_id,
         payment_method_id: t.payment_method_id,
         description: t.description || '',
-        source: t.source || '',
       })
     } else {
       resetForm()
@@ -131,9 +133,12 @@ const onSubmit = handleSubmit(async (values) => {
         </option>
       </AppSelect>
 
-      <AppInput v-model="description" label="Description" placeholder="Optional note" />
-
-      <AppInput v-model="source" label="Source" placeholder="e.g. Salary, Amazon" />
+      <AppInput
+        v-model="description"
+        label="Description"
+        placeholder="Optional note"
+        :error="descriptionErr"
+      />
     </form>
 
     <template #footer>

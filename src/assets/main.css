@@ -53,16 +53,16 @@ body {
   --color-surface-50: #0f172a;
   --color-surface-100: #1e293b;
   --color-surface-200: #334155;
-  --color-surface-300: #475569;
-  --color-surface-400: #64748b;
-  --color-surface-500: #94a3b8;
-  --color-surface-600: #cbd5e1;
-  --color-surface-700: #e2e8f0;
-  --color-surface-800: #f1f5f9;
-  --color-surface-900: #f8fafc;
+  --color-surface-300: #64748b;
+  --color-surface-400: #94a3b8; /* brightened so muted text has ≥4.5:1 on dark cards */
+  --color-surface-500: #cbd5e1;
+  --color-surface-600: #e2e8f0;
+  --color-surface-700: #f1f5f9;
+  --color-surface-800: #f8fafc;
+  --color-surface-900: #ffffff;
   --color-surface-950: #ffffff;
-  --color-income-light: #064e3b;
-  --color-expense-light: #450a0a;
+  --color-income-light: rgb(16 185 129 / 0.15);   /* badge bg — translucent, not solid */
+  --color-expense-light: rgb(239 68 68 / 0.15);    /* badge bg — translucent, not solid */
 }
 
 /* Remap bg-white / border classes in dark mode so cards go dark automatically */
@@ -72,6 +72,17 @@ body {
 .dark .border-white {
   border-color: var(--color-surface-200);
 }
+
+/* Semantic colour backgrounds that don't auto-invert */
+.dark .bg-red-50   { background-color: rgb(127 29 29 / 0.25); }
+.dark .bg-red-100  { background-color: rgb(127 29 29 / 0.35); }
+.dark .bg-green-50 { background-color: rgb(6 78 59 / 0.25); }
+.dark .bg-green-100{ background-color: rgb(6 78 59 / 0.35); }
+.dark .bg-yellow-50 { background-color: rgb(113 63 18 / 0.25); }
+.dark .bg-yellow-100{ background-color: rgb(113 63 18 / 0.35); }
+.dark .bg-blue-50  { background-color: rgb(30 58 138 / 0.25); }
+.dark .bg-blue-100 { background-color: rgb(30 58 138 / 0.35); }
+.dark .bg-primary-50 { background-color: rgb(30 27 75 / 0.5); }
 .dark input,
 .dark select,
 .dark textarea {
@@ -82,6 +93,96 @@ body {
 .dark input::placeholder,
 .dark textarea::placeholder {
   color: var(--color-surface-400);
+}
+
+/* ─── Dark mode: fixed-palette colour remaps ─────────────────────────────────
+   Tailwind's named palettes (primary, red, green …) don't invert with the
+   surface scale.  These rules ensure legibility without scattering dark:
+   utilities across every component.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* Income / expense — brighter in dark mode so they're legible on translucent badge bg */
+.dark .text-income  { color: #34d399; }   /* → emerald-400 */
+.dark .text-expense { color: #f87171; }   /* → red-400     */
+
+/* Primary */
+.dark .text-primary-600  { color: #60a5fa; }   /* → primary-400  */
+.dark .text-primary-700  { color: #93c5fd; }   /* → primary-300  */
+
+/* Red */
+.dark .text-red-600      { color: #f87171; }   /* → red-400     */
+.dark .text-red-700      { color: #fca5a5; }   /* → red-300     */
+.dark .text-red-800      { color: #fecaca; }   /* → red-200     */
+.dark .border-red-200    { border-color: rgba(248 113 113 / 0.25); }
+.dark .border-red-400    { border-color: rgba(248 113 113 / 0.60); }
+
+/* Green */
+.dark .text-green-700    { color: #4ade80; }   /* → green-400   */
+.dark .text-green-800    { color: #86efac; }   /* → green-300   */
+.dark .border-green-200  { border-color: rgba(74 222 128 / 0.25); }
+
+/* Yellow / amber */
+.dark .text-yellow-700   { color: #facc15; }   /* → yellow-400  */
+.dark .text-yellow-800   { color: #fde68a; }   /* → yellow-200  */
+.dark .border-yellow-200 { border-color: rgba(250 204 21 / 0.25); }
+
+/* Blue */
+.dark .text-blue-800     { color: #93c5fd; }   /* → blue-300    */
+.dark .border-blue-200   { border-color: rgba(147 197 253 / 0.25); }
+
+/* ─── ApexCharts dark mode ───────────────────────────────────────────────────
+   ApexCharts injects raw SVG/HTML; it ignores Tailwind utilities.
+   These CSS rules override its internal colour assignments globally.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* Axis & data labels (SVG fill) */
+.dark .apexcharts-text tspan,
+.dark .apexcharts-xaxis-label tspan,
+.dark .apexcharts-yaxis-label tspan,
+.dark .apexcharts-datalabel tspan {
+  fill: #94a3b8;
+}
+
+/* Legend text (HTML) */
+.dark .apexcharts-legend-text {
+  color: #94a3b8 !important;
+}
+
+/* Grid lines */
+.dark .apexcharts-gridline {
+  stroke: #334155;
+}
+.dark .apexcharts-xcrosshairs,
+.dark .apexcharts-ycrosshairs {
+  stroke: #64748b;
+}
+
+/* Tooltip shell */
+.dark .apexcharts-tooltip {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5) !important;
+}
+.dark .apexcharts-tooltip-title {
+  background: #334155 !important;
+  border-color: #475569 !important;
+  color: #f1f5f9 !important;
+}
+.dark .apexcharts-tooltip-text,
+.dark .apexcharts-tooltip-text-y-value,
+.dark .apexcharts-tooltip-text-y-label,
+.dark .apexcharts-tooltip-text-z-value {
+  color: #e2e8f0 !important;
+}
+
+/* Pie / donut centre-labels */
+.dark .apexcharts-pie-label {
+  fill: #f1f5f9;
+}
+
+/* Canvas SVG — keep transparent so card bg shows */
+.dark .apexcharts-canvas svg {
+  background: transparent;
 }
 
 /* ─── Scrollbar ──────────────────────────────────────────────────────────────── */

@@ -72,7 +72,7 @@ function isActive(to: string) {
         :class="
           isActive(item.to)
             ? 'bg-primary-50 text-primary-700'
-            : 'text-surface-600 hover:bg-surface-50 hover:text-surface-900'
+            : 'text-surface-600 hover:bg-surface-100 hover:text-surface-900'
         "
         @click="emit('close')"
       >

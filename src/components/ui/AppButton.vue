@@ -37,9 +37,9 @@ const classes = computed(() => {
       'bg-surface-100 text-surface-800 hover:bg-surface-200 active:bg-surface-300 focus-visible:ring-surface-400',
     danger: 'bg-red-600 text-white hover:bg-red-700 active:bg-red-800 focus-visible:ring-red-500',
     ghost:
-      'text-surface-700 hover:bg-surface-100 active:bg-surface-200 focus-visible:ring-surface-400',
+      'text-surface-700 hover:bg-surface-100 dark:hover:bg-surface-200 active:bg-surface-200 focus-visible:ring-surface-400',
     outline:
-      'border border-surface-300 text-surface-700 hover:bg-surface-50 active:bg-surface-100 focus-visible:ring-surface-400',
+      'border border-surface-300 text-surface-700 hover:bg-surface-100 dark:hover:bg-surface-200 active:bg-surface-200 focus-visible:ring-surface-400',
   }
 
   return [base, sizes[props.size], variants[props.variant], props.full ? 'w-full' : '']

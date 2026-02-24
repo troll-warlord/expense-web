@@ -6,6 +6,8 @@ import type {
   CreateTransactionPayload,
   UpdateTransactionPayload,
   TransactionFilters,
+  TransactionSummary,
+  SummaryFilters,
 } from '@/types'
 // ApiResponse kept for other endpoints
 
@@ -30,5 +32,18 @@ export const transactionsApi = {
 
   remove(id: string) {
     return api.delete<ApiResponse<null>>(`/transactions/${id}`)
+  },
+
+  summary(filters: SummaryFilters = {}) {
+    return api.get<ApiResponse<TransactionSummary>>('/transactions/summary', {
+      params: filters,
+    })
+  },
+
+  export(filters: TransactionFilters = {}) {
+    return api.get<Blob>('/transactions/export', {
+      params: filters,
+      responseType: 'blob',
+    })
   },
 }
