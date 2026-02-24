@@ -1,6 +1,8 @@
 name: Release to GitHub Pages
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -45,10 +47,10 @@ jobs:
           cd dist
 
           # 3. Initialize a fresh repo in the dist folder
-          git init -b main
+          git init -b live
           git add -A
           git commit -m "Deploy: system build $(date +'%Y-%m-%d %H:%M:%S')"
 
           # 4. Force push to the 'live' branch
           # We construct the URL with the token to authorize the push
-          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" main:live
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" live:live
