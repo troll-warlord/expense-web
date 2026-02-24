@@ -242,7 +242,8 @@ const dailyCashflowData = computed(() => {
   const expByDay: Record<string, number> = {}
   const incByDay: Record<string, number> = {}
   for (const t of pmTransactions.value) {
-    const day = (t.date as string).split('T')[0]
+    const day = (t.date as string).split('T')[0] ?? ''
+    if (!day) continue
     const type = masterData.getCategoryById(t.category_id)?.type
     if (type === 'expense') expByDay[day] = (expByDay[day] ?? 0) + t.amount
     if (type === 'income') incByDay[day] = (incByDay[day] ?? 0) + t.amount
