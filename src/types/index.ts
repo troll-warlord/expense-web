@@ -96,6 +96,8 @@ export interface Category {
   name: string
   type: CategoryType
   is_default: boolean
+  icon?: string
+  color?: string
   created_at: string
   updated_at: string
 }

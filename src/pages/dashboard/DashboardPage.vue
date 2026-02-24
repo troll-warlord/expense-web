@@ -252,9 +252,9 @@ const dailyCashflowData = computed(() => {
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
   ]
-  const fmt = (d: string) => {
-    const parts = d.split('-')
-    return `${parts[2]} ${monthNames[Number(parts[1]) - 1]}`
+  const fmt = (d: string): string => {
+    const [, mon = '1', day = ''] = d.split('-')
+    return `${day} ${monthNames[Number(mon) - 1] ?? ''}`
   }
   return {
     labels: days.map(fmt),
@@ -292,17 +292,20 @@ const areaOptions = computed(() => ({
 const DOW_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 const dowOptions = computed(() => {
-  const totals = new Array(7).fill(0)
-  const counts = new Array(7).fill(0)
+  const totals: number[] = [0, 0, 0, 0, 0, 0, 0]
+  const counts: number[] = [0, 0, 0, 0, 0, 0, 0]
   for (const t of pmTransactions.value) {
     const cat = masterData.getCategoryById(t.category_id)
     if (cat?.type === 'expense') {
       const dow = new Date((t.date as string).split('T')[0] + 'T00:00:00').getDay()
-      totals[dow] += t.amount
-      counts[dow]++
+      totals[dow] = (totals[dow] ?? 0) + t.amount
+      counts[dow] = (counts[dow] ?? 0) + 1
     }
   }
-  const avgSpend = totals.map((total, i) => (counts[i] > 0 ? Math.round(total / counts[i]) : 0))
+  const avgSpend = totals.map((total, i) => {
+    const c = counts[i] ?? 0
+    return c > 0 ? Math.round(total / c) : 0
+  })
   return {
     chart: { type: 'bar' as const, height: 260, toolbar: { show: false } },
     series: [{ name: 'Avg Spend', data: avgSpend }],
