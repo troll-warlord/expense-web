@@ -14,22 +14,7 @@ const route = useRoute()
 const auth = useAuthStore()
 const toast = useToast()
 
-const COUNTRY_CODES = [
-  { code: '+91',  flag: '🇮🇳', name: 'India' },
-  { code: '+1',   flag: '🇺🇸', name: 'USA / Canada' },
-  { code: '+44',  flag: '🇬🇧', name: 'UK' },
-  { code: '+971', flag: '🇦🇪', name: 'UAE' },
-  { code: '+65',  flag: '🇸🇬', name: 'Singapore' },
-  { code: '+61',  flag: '🇦🇺', name: 'Australia' },
-  { code: '+64',  flag: '🇳🇿', name: 'New Zealand' },
-  { code: '+49',  flag: '🇩🇪', name: 'Germany' },
-  { code: '+33',  flag: '🇫🇷', name: 'France' },
-  { code: '+81',  flag: '🇯🇵', name: 'Japan' },
-  { code: '+86',  flag: '🇨🇳', name: 'China' },
-  { code: '+55',  flag: '🇧🇷', name: 'Brazil' },
-]
-
-const selectedCode = ref('+91')
+const COUNTRY_CODE = '+91'
 
 type Step = 'phone' | 'otp'
 const step = ref<Step>('phone')
@@ -57,11 +42,11 @@ const phoneLoading = ref(false)
 const submitPhone = phoneForm.handleSubmit(async (values) => {
   phoneLoading.value = true
   try {
-    await authApi.requestOtp({ country_code: selectedCode.value, phone_number: values.phone_number })
+    await authApi.requestOtp({ country_code: COUNTRY_CODE, phone_number: values.phone_number })
     phoneNumber.value = values.phone_number
     step.value = 'otp'
     startTimer()
-    toast.success(`OTP sent to ${selectedCode.value} ${values.phone_number}`)
+    toast.success(`OTP sent to ${COUNTRY_CODE} ${values.phone_number}`)
   } catch (e) { toast.error(extractErrorMessage(e)) }
   finally { phoneLoading.value = false }
 })
@@ -76,7 +61,7 @@ const otpLoading = ref(false)
 const submitOtp = otpForm.handleSubmit(async (values) => {
   otpLoading.value = true
   try {
-    const { is_new_user } = await auth.login(selectedCode.value, phoneNumber.value, values.otp)
+    const { is_new_user } = await auth.login(COUNTRY_CODE, phoneNumber.value, values.otp)
     if (is_new_user) { router.push('/profile-setup') }
     else { router.push((route.query.redirect as string) || '/') }
   } catch (e) { toast.error(extractErrorMessage(e)) }
@@ -86,7 +71,7 @@ const submitOtp = otpForm.handleSubmit(async (values) => {
 async function resendOtp() {
   if (resendCooldown.value > 0) return
   try {
-    await authApi.requestOtp({ country_code: selectedCode.value, phone_number: phoneNumber.value })
+    await authApi.requestOtp({ country_code: COUNTRY_CODE, phone_number: phoneNumber.value })
     startTimer()
     toast.success('OTP resent!')
   } catch (e) { toast.error(extractErrorMessage(e)) }
@@ -219,7 +204,7 @@ const mockBars = [38, 56, 42, 70, 50, 64, 48]
             {{
               step === 'phone'
                 ? 'Sign in with your phone number to continue.'
-                : `Code sent to ${selectedCode} ${phoneNumber}`
+                : `Code sent to ${COUNTRY_CODE} ${phoneNumber}`
             }}
           </p>
         </div>
@@ -241,20 +226,12 @@ const mockBars = [38, 56, 42, 70, 50, 64, 48]
                 Phone Number
               </label>
               <div class="flex gap-2">
-                <select
-                  v-model="selectedCode"
-                  class="shrink-0 h-11 rounded-xl border px-2 text-sm focus:outline-none appearance-none cursor-pointer"
-                  style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: white"
+                <div
+                  class="shrink-0 h-11 rounded-xl border px-3 flex items-center text-sm font-medium"
+                  style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.12); color: rgba(255,255,255,0.5)"
                 >
-                  <option
-                    v-for="c in COUNTRY_CODES"
-                    :key="c.code"
-                    :value="c.code"
-                    style="background:#1e1b4b; color:white"
-                  >
-                    {{ c.flag }} {{ c.code }}
-                  </option>
-                </select>
+                  🇮🇳 +91
+                </div>
                 <input
                   v-model="phoneVal"
                   type="tel"
@@ -290,7 +267,7 @@ const mockBars = [38, 56, 42, 70, 50, 64, 48]
               class="flex items-center justify-between rounded-xl px-4 py-3"
               style="background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3)"
             >
-              <p class="text-sm text-white font-medium">{{ selectedCode }} {{ phoneNumber }}</p>
+              <p class="text-sm text-white font-medium">{{ COUNTRY_CODE }} {{ phoneNumber }}</p>
               <button
                 type="button"
                 class="text-xs font-semibold"
