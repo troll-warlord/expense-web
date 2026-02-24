@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import VueApexCharts from 'vue3-apexcharts'
 import { transactionsApi } from '@/api/transactions'
 import { useMasterDataStore } from '@/stores/masterData'
+import { useBudgetStore } from '@/stores/budgets'
 import AppShell from '@/components/layout/AppShell.vue'
 import AppSpinner from '@/components/ui/AppSpinner.vue'
 import AppSkeleton from '@/components/ui/AppSkeleton.vue'
@@ -14,6 +15,7 @@ import { RouterLink } from 'vue-router'
 
 const toast = useToast()
 const masterData = useMasterDataStore()
+const budgetStore = useBudgetStore()
 
 // ─── Period filter ─────────────────────────────────────────────────────────────
 type PeriodKey =
@@ -490,7 +492,10 @@ async function loadDashboard() {
 }
 
 watch(selectedPeriod, loadCharts)
-onMounted(loadDashboard)
+onMounted(() => {
+  loadDashboard()
+  if (!budgetStore.loaded) budgetStore.fetchBudgets()
+})
 </script>
 
 <template>
@@ -677,6 +682,70 @@ onMounted(loadDashboard)
           >
             {{ savingsRate === null ? '—' : `${savingsRate}%` }}
           </p>
+        </div>
+      </div>
+
+      <!-- Budget Overview -->
+      <div
+        v-if="budgetStore.budgets.length > 0"
+        class="bg-white rounded-xl border border-surface-100 shadow-sm p-5"
+      >
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-sm font-semibold text-surface-700">Budget Overview</h2>
+          <RouterLink to="/budgets" class="text-xs text-primary-600 hover:underline font-medium">
+            Manage budgets
+          </RouterLink>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div
+            v-for="budget in budgetStore.budgets.slice(0, 6)"
+            :key="budget.id"
+            class="space-y-2"
+          >
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-medium text-surface-800 truncate max-w-[60%]">
+                {{ budget.category ? budget.category.name : 'Overall' }}
+              </span>
+              <span
+                class="font-semibold shrink-0"
+                :class="
+                  budget.percent >= 100
+                    ? 'text-red-600'
+                    : budget.percent >= 80
+                      ? 'text-yellow-600'
+                      : 'text-emerald-600'
+                "
+              >
+                {{ Math.min(budget.percent, 999).toFixed(0) }}%
+              </span>
+            </div>
+            <div
+              class="relative h-2 rounded-full overflow-hidden"
+              :class="
+                budget.percent >= 100
+                  ? 'bg-red-100'
+                  : budget.percent >= 80
+                    ? 'bg-yellow-100'
+                    : 'bg-emerald-100'
+              "
+            >
+              <div
+                class="h-full rounded-full transition-all duration-500"
+                :class="
+                  budget.percent >= 100
+                    ? 'bg-red-500'
+                    : budget.percent >= 80
+                      ? 'bg-yellow-400'
+                      : 'bg-emerald-500'
+                "
+                :style="{ width: `${Math.min(budget.percent, 100)}%` }"
+              />
+            </div>
+            <div class="flex justify-between text-[10px] text-surface-400">
+              <span>{{ formatCurrency(budget.spent) }} spent</span>
+              <span>of {{ formatCurrency(budget.amount) }}</span>
+            </div>
+          </div>
         </div>
       </div>
 

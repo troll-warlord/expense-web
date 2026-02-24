@@ -191,3 +191,35 @@ export interface SummaryFilters {
   date_from?: string
   date_to?: string
 }
+
+// ─── Budget ────────────────────────────────────────────────────────────────────
+
+export interface BudgetCategory {
+  id: string
+  name: string
+  type: string
+}
+
+export interface Budget {
+  id: string
+  category_id: string | null
+  category: BudgetCategory | null
+  amount: number
+  period: string
+  spent: number
+  percent: number
+  remaining: number
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateBudgetPayload {
+  category_id?: string | null
+  amount: number
+  period?: string
+}
+
+export interface UpdateBudgetPayload {
+  amount?: number
+  period?: string
+}

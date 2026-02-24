@@ -17,6 +17,7 @@ import AppSelect from '@/components/ui/AppSelect.vue'
 import AppInput from '@/components/ui/AppInput.vue'
 import AppEmptyState from '@/components/ui/AppEmptyState.vue'
 import TransactionFormModal from '@/components/transactions/TransactionFormModal.vue'
+import AppModal from '@/components/ui/AppModal.vue'
 import type { Transaction, TransactionFilters } from '@/types'
 
 const txnStore = useTransactionStore()
@@ -114,11 +115,40 @@ async function handleDelete(txn: Transaction) {
 
 // ─── CSV Export ───────────────────────────────────────────────────────────────
 const exportLoading = ref(false)
+const showExportModal = ref(false)
+const exportDateFrom = ref('')
+const exportDateTo = ref('')
+
+function openExportModal() {
+  exportDateFrom.value = ''
+  exportDateTo.value = ''
+  showExportModal.value = true
+}
+
+function setExportPreset(preset: 'this_month' | 'last_month' | 'last_3_months' | 'all') {
+  const now = new Date()
+  if (preset === 'this_month') {
+    exportDateFrom.value = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+    exportDateTo.value = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+  } else if (preset === 'last_month') {
+    exportDateFrom.value = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0]
+    exportDateTo.value = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0]
+  } else if (preset === 'last_3_months') {
+    exportDateFrom.value = new Date(now.getFullYear(), now.getMonth() - 2, 1).toISOString().split('T')[0]
+    exportDateTo.value = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+  } else {
+    exportDateFrom.value = ''
+    exportDateTo.value = ''
+  }
+}
 
 async function exportCSV() {
   exportLoading.value = true
   try {
-    const res = await transactionsApi.export(buildFilters())
+    const filters: TransactionFilters = {}
+    if (exportDateFrom.value) filters.date_from = exportDateFrom.value
+    if (exportDateTo.value) filters.date_to = exportDateTo.value
+    const res = await transactionsApi.export(filters)
     const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -127,6 +157,7 @@ async function exportCSV() {
     a.click()
     URL.revokeObjectURL(url)
     toast.success('Export downloaded')
+    showExportModal.value = false
   } catch (e) {
     toast.error(extractErrorMessage(e))
   } finally {
@@ -147,6 +178,16 @@ onMounted(() => txnStore.fetchTransactions({}))
           <p class="text-xs text-surface-400 mt-0.5">{{ txnStore.total }} total records</p>
         </div>
         <div class="flex items-center gap-2">
+          <!-- Export button (mobile only) -->
+          <button
+            class="sm:hidden flex items-center gap-1.5 px-3 py-2 rounded-lg border border-surface-200 text-sm font-medium text-surface-600 bg-white hover:bg-surface-50 transition-colors"
+            @click="openExportModal"
+          >
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Export
+          </button>
           <!-- Filter toggle (mobile only) -->
           <button
             class="sm:hidden flex items-center gap-1.5 px-3 py-2 rounded-lg border border-surface-200 text-sm font-medium text-surface-600 bg-white hover:bg-surface-50 transition-colors"
@@ -175,9 +216,8 @@ onMounted(() => txnStore.fetchTransactions({}))
           <!-- Add + Export buttons (desktop) -->
           <AppButton
             variant="outline"
-            :loading="exportLoading"
             class="hidden sm:flex"
-            @click="exportCSV"
+            @click="openExportModal"
           >
             <svg
               class="h-4 w-4"
@@ -438,6 +478,73 @@ onMounted(() => txnStore.fetchTransactions({}))
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
       </svg>
     </button>
+
+    <!-- Export CSV Modal -->
+    <AppModal v-if="showExportModal" title="Export Transactions" size="sm" @close="showExportModal = false">
+      <div class="px-6 py-5 space-y-5">
+        <!-- Quick presets -->
+        <div>
+          <p class="text-xs font-medium text-surface-500 uppercase tracking-wide mb-2">Quick Range</p>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="preset in [
+                { key: 'this_month', label: 'This Month' },
+                { key: 'last_month', label: 'Last Month' },
+                { key: 'last_3_months', label: 'Last 3 Months' },
+                { key: 'all', label: 'All Time' },
+              ]"
+              :key="preset.key"
+              class="px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors"
+              :class="
+                (preset.key === 'all' && exportDateFrom === '' && exportDateTo === '') ||
+                (preset.key === 'this_month' &&
+                  exportDateFrom === new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]) ||
+                (preset.key === 'last_month' &&
+                  exportDateFrom === new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toISOString().split('T')[0] &&
+                  exportDateTo === new Date(new Date().getFullYear(), new Date().getMonth(), 0).toISOString().split('T')[0]) ||
+                (preset.key === 'last_3_months' &&
+                  exportDateFrom === new Date(new Date().getFullYear(), new Date().getMonth() - 2, 1).toISOString().split('T')[0])
+                  ? 'border-primary-500 bg-primary-50 text-primary-700'
+                  : 'border-surface-200 bg-white text-surface-600 hover:bg-surface-50'
+              "
+              @click="setExportPreset(preset.key as 'this_month' | 'last_month' | 'last_3_months' | 'all')"
+            >
+              {{ preset.label }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Custom date range -->
+        <div>
+          <p class="text-xs font-medium text-surface-500 uppercase tracking-wide mb-2">Custom Range (optional)</p>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-surface-500 mb-1">From</label>
+              <AppInput v-model="exportDateFrom" type="date" />
+            </div>
+            <div>
+              <label class="block text-xs text-surface-500 mb-1">To</label>
+              <AppInput v-model="exportDateTo" type="date" />
+            </div>
+          </div>
+        </div>
+
+        <p class="text-xs text-surface-400">
+          Leave blank to export all transactions.
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div class="flex justify-end gap-2 px-6 py-4 border-t border-surface-100">
+        <AppButton variant="ghost" @click="showExportModal = false">Cancel</AppButton>
+        <AppButton variant="primary" :loading="exportLoading" @click="exportCSV">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Download CSV
+        </AppButton>
+      </div>
+    </AppModal>
 
     <!-- Transaction Modal -->
     <TransactionFormModal

@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" href="/expense-web/favicon.ico" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Expense Tracker</title>
     <!-- Decode path encoded by public/404.html for SPA routing on GitHub Pages -->
@@ -18,10 +18,7 @@
           window.history.replaceState(
             null,
             null,
-            l.pathname.slice(0, -1) +
-              decoded[0] +
-              (decoded[1] ? '?' + decoded[1] : '') +
-              l.hash,
+            l.pathname.slice(0, -1) + decoded[0] + (decoded[1] ? '?' + decoded[1] : '') + l.hash,
           )
         }
       })(window.location)
