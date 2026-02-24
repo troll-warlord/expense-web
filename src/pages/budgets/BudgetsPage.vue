@@ -39,7 +39,7 @@ const editingBudget = ref<Budget | null>(null)
 function openCreate() {
   editingBudget.value = null
   resetForm({
-    values: { category_id: '', amount: '' },
+    values: { category_id: '', amount: 0 },
   })
   showModal.value = true
 }
@@ -49,7 +49,7 @@ function openEdit(budget: Budget) {
   resetForm({
     values: {
       category_id: budget.category_id ?? '',
-      amount: String(budget.amount),
+      amount: budget.amount,
     },
   })
   showModal.value = true
@@ -74,7 +74,7 @@ const formSchema = toTypedSchema(
 
 const { handleSubmit, isSubmitting, resetForm } = useForm({ validationSchema: formSchema })
 const { value: categoryIdVal, errorMessage: categoryIdErr } = useField<string>('category_id')
-const { value: amountVal, errorMessage: amountErr } = useField<string>('amount')
+const { value: amountVal, errorMessage: amountErr } = useField<number>('amount')
 
 const submitBudget = handleSubmit(async (values) => {
   try {

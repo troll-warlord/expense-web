@@ -128,14 +128,14 @@ function openExportModal() {
 function setExportPreset(preset: 'this_month' | 'last_month' | 'last_3_months' | 'all') {
   const now = new Date()
   if (preset === 'this_month') {
-    exportDateFrom.value = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
-    exportDateTo.value = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+    exportDateFrom.value = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
+    exportDateTo.value = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
   } else if (preset === 'last_month') {
-    exportDateFrom.value = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0]
-    exportDateTo.value = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0]
+    exportDateFrom.value = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 10)
+    exportDateTo.value = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0, 10)
   } else if (preset === 'last_3_months') {
-    exportDateFrom.value = new Date(now.getFullYear(), now.getMonth() - 2, 1).toISOString().split('T')[0]
-    exportDateTo.value = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+    exportDateFrom.value = new Date(now.getFullYear(), now.getMonth() - 2, 1).toISOString().slice(0, 10)
+    exportDateTo.value = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
   } else {
     exportDateFrom.value = ''
     exportDateTo.value = ''
