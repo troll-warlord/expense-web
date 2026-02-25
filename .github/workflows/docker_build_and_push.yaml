@@ -24,7 +24,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      ── Uncomment when ready to push ────────────────────────────────────────
+      # ── Uncomment when ready to push ────────────────────────────────────────
       - name: Log in to registry
         uses: docker/login-action@v3
         with:
@@ -45,7 +45,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-          ── Uncomment to push ──────────────────────────────────────────────
+          # ── Uncomment to push ──────────────────────────────────────────────
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest
