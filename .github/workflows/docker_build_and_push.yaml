@@ -38,7 +38,7 @@ jobs:
           context: .
           # Builds for both Intel/AMD servers and ARM (AWS Graviton, Apple Silicon)
           platforms: linux/amd64,linux/arm64
-          push: false
+          # push: false
           # tags: |
           #   ${{ env.IMAGE_NAME }}:latest
           #   ${{ env.IMAGE_NAME }}:${{ github.sha }}
