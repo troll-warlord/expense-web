@@ -1,0 +1,1 @@
+import{d as l,k as n,c as a,y as o}from"./index-BYtlHEAg.js";const r=l({__name:"AppSkeleton",props:{h:{},w:{},pill:{type:Boolean}},setup(e){return(s,t)=>(n(),a("div",{class:o(["animate-pulse bg-surface-100",[e.h??"h-4",e.w??"w-full",e.pill?"rounded-full":"rounded"]])},null,2))}});export{r as _};

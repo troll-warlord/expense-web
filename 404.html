@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Expense Tracker</title>
+    <script>
+      // SPA redirect for GitHub Pages sub-path hosting.
+      // Encodes the current path into a query param and sends the browser to index.html.
+      // segmentCount = 1 because the repo is hosted at /<repo-name>/
+      var segmentCount = 1
+      var l = window.location
+      l.replace(
+        l.protocol +
+          '//' +
+          l.host +
+          l.pathname
+            .split('/')
+            .slice(0, 1 + segmentCount)
+            .join('/') +
+          '/?/' +
+          l.pathname.slice(1).split('/').slice(segmentCount).join('/').replace(/&/g, '~and~') +
+          (l.search ? '~and~' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+          l.hash,
+      )
+    </script>
+  </head>
+  <body></body>
+</html>
