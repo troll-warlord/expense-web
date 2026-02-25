@@ -18,20 +18,24 @@ const schema = toTypedSchema(
   z.object({
     first_name: z.string().min(1, 'First name is required').max(100, 'Max 100 characters'),
     last_name: z.string().min(1, 'Last name is required').max(100, 'Max 100 characters'),
-    email: z.string().min(1, 'Email is required').email('Enter a valid email address'),
+    phone_number: z.string().max(20, 'Too long').regex(/^\d*$/, 'Digits only').optional(),
   }),
 )
 
 const form = useForm({ validationSchema: schema })
 const { value: firstNameVal, errorMessage: firstNameErr } = useField<string>('first_name')
 const { value: lastNameVal, errorMessage: lastNameErr } = useField<string>('last_name')
-const { value: emailVal, errorMessage: emailErr } = useField<string>('email')
+const { value: phoneVal, errorMessage: phoneErr } = useField<string>('phone_number')
 const loading = ref(false)
 
 const submit = form.handleSubmit(async (values) => {
   loading.value = true
   try {
-    await auth.updateProfile(values)
+    await auth.updateProfile({
+      first_name: values.first_name,
+      last_name: values.last_name,
+      phone_number: values.phone_number || null,
+    })
     toast.success('Welcome! Your profile is all set.')
     router.push('/')
   } catch (e) {
@@ -115,7 +119,7 @@ const submit = form.handleSubmit(async (values) => {
                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <span class="text-primary-100 text-sm line-through">Verify phone number</span>
+            <span class="text-primary-100 text-sm line-through">Verify email address</span>
           </div>
           <div class="flex items-center gap-3">
             <div class="h-6 w-6 rounded-full bg-white flex items-center justify-center shrink-0">
@@ -162,9 +166,7 @@ const submit = form.handleSubmit(async (values) => {
           <h1 class="text-2xl font-bold text-surface-900">Complete your profile</h1>
           <p class="text-sm text-surface-500">
             Signed in as
-            <span class="font-medium text-surface-700">
-              {{ auth.user?.country_code }} {{ auth.user?.phone_number }}
-            </span>
+            <span class="font-medium text-surface-700">{{ auth.user?.email }}</span>
           </p>
         </div>
 
@@ -186,13 +188,13 @@ const submit = form.handleSubmit(async (values) => {
             />
           </div>
           <AppInput
-            v-model="emailVal"
-            label="Email"
-            placeholder="demo@example.com"
-            type="email"
-            autocomplete="email"
-            required
-            :error="emailErr"
+            v-model="phoneVal"
+            label="Phone Number (optional)"
+            placeholder="9876543210"
+            type="tel"
+            inputmode="numeric"
+            autocomplete="tel-national"
+            :error="phoneErr"
           />
           <AppButton type="submit" :loading="loading" full size="lg">
             Save &amp; Continue

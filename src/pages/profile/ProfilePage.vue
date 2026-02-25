@@ -21,7 +21,7 @@ const initials = computed(() => {
   const u = auth.user
   if (!u) return '?'
   if (u.first_name) return u.first_name.charAt(0).toUpperCase()
-  return u.phone_number.charAt(0)
+  return u.email.charAt(0).toUpperCase()
 })
 
 // ─── Edit profile form ────────────────────────────────────────────────────────
@@ -29,7 +29,7 @@ const editSchema = toTypedSchema(
   z.object({
     first_name: z.string().min(1, 'Required').max(100),
     last_name: z.string().min(1, 'Required').max(100),
-    email: z.string().min(1, 'Required').email('Enter a valid email'),
+    phone_number: z.string().max(20, 'Too long').regex(/^\d*$/, 'Digits only').optional(),
   }),
 )
 
@@ -38,20 +38,24 @@ const editForm = useForm({
   initialValues: {
     first_name: auth.user?.first_name ?? '',
     last_name: auth.user?.last_name ?? '',
-    email: auth.user?.email ?? '',
+    phone_number: auth.user?.phone_number ?? '',
   },
 })
 
 const { value: firstNameVal, errorMessage: firstNameErr } = useField<string>('first_name')
 const { value: lastNameVal, errorMessage: lastNameErr } = useField<string>('last_name')
-const { value: emailVal, errorMessage: emailErr } = useField<string>('email')
+const { value: phoneVal, errorMessage: phoneErr } = useField<string>('phone_number')
 
 const editLoading = ref(false)
 
 const saveProfile = editForm.handleSubmit(async (values) => {
   editLoading.value = true
   try {
-    await auth.updateProfile(values)
+    await auth.updateProfile({
+      first_name: values.first_name,
+      last_name: values.last_name,
+      phone_number: values.phone_number || null,
+    })
     toast.success('Profile updated')
   } catch (e) {
     toast.error(extractErrorMessage(e))
@@ -122,14 +126,14 @@ async function handleDeactivate() {
 
             <div class="border-t border-surface-100 pt-4 space-y-3">
               <div class="flex items-center justify-between text-sm">
-                <span class="text-surface-500">Phone number</span>
-                <span class="font-medium text-surface-900">
-                  {{ auth.user?.country_code }} {{ auth.user?.phone_number }}
-                </span>
+                <span class="text-surface-500">Email (login)</span>
+                <span class="font-medium text-surface-900">{{ auth.user?.email }}</span>
               </div>
               <div class="flex items-center justify-between text-sm">
-                <span class="text-surface-500">Email</span>
-                <span class="font-medium text-surface-900">{{ auth.user?.email || '—' }}</span>
+                <span class="text-surface-500">Phone number</span>
+                <span class="font-medium text-surface-900">
+                  {{ auth.user?.phone_number || '—' }}
+                </span>
               </div>
               <div class="flex items-center justify-between text-sm">
                 <span class="text-surface-500">Auth method</span>
@@ -208,13 +212,17 @@ async function handleDeactivate() {
                 />
               </div>
               <AppInput
-                v-model="emailVal"
-                label="Email"
-                placeholder="demo@example.com"
-                type="email"
-                required
-                :error="emailErr"
+                v-model="phoneVal"
+                label="Phone Number (optional)"
+                placeholder="9876543210"
+                type="tel"
+                inputmode="numeric"
+                autocomplete="tel-national"
+                :error="phoneErr"
               />
+              <div class="text-xs text-surface-400 -mt-2 px-0.5">
+                Your login email: <span class="font-medium text-surface-600">{{ auth.user?.email }}</span>
+              </div>
               <AppButton type="submit" :loading="editLoading" variant="primary">
                 Save Changes
               </AppButton>

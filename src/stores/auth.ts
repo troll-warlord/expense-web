@@ -31,8 +31,8 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem(REFRESH_TOKEN_KEY)
   }
 
-  async function login(country_code: string, phone_number: string, otp: string) {
-    const { data: res } = await authApi.verifyOtp({ country_code, phone_number, otp })
+  async function login(email: string, otp: string) {
+    const { data: res } = await authApi.verifyOtp({ email, otp })
     if (!res.success) throw new Error(res.message)
     setTokens(res.data.access_token, res.data.refresh_token)
     user.value = res.data.user

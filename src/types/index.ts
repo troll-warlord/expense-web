@@ -44,13 +44,11 @@ export interface TokenPair {
 }
 
 export interface RequestOtpPayload {
-  country_code: string
-  phone_number: string
+  email: string
 }
 
 export interface VerifyOtpPayload {
-  country_code: string
-  phone_number: string
+  email: string
   otp: string
   device_hint?: string
 }
@@ -70,11 +68,11 @@ export interface LogoutPayload {
 
 export interface User {
   id: string
-  country_code: string
-  phone_number: string
+  email: string
+  country_code: string | null
+  phone_number: string | null
   first_name: string | null
   last_name: string | null
-  email: string | null
   is_profile_complete: boolean
   display_name: string
   created_at: string
@@ -84,7 +82,7 @@ export interface User {
 export interface UpdateProfilePayload {
   first_name: string
   last_name: string
-  email: string
+  phone_number?: string | null
 }
 
 // ─── Category ──────────────────────────────────────────────────────────────────

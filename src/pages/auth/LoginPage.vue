@@ -16,9 +16,9 @@ const toast = useToast()
 
 const COUNTRY_CODE = '+91'
 
-type Step = 'phone' | 'otp'
-const step = ref<Step>('phone')
-const phoneNumber = ref('')
+type Step = 'email' | 'otp'
+const step = ref<Step>('email')
+const emailAddress = ref('')
 
 const resendCooldown = ref(0)
 let _timer: ReturnType<typeof setInterval> | null = null
@@ -32,23 +32,23 @@ function startTimer() {
 }
 onBeforeUnmount(() => { if (_timer) clearInterval(_timer) })
 
-const phoneSchema = toTypedSchema(z.object({
-  phone_number: z.string().min(6, 'Enter a valid phone number').max(15, 'Too long').regex(/^\d+$/, 'Digits only'),
+const emailSchema = toTypedSchema(z.object({
+  email: z.string().min(1, 'Email is required').email('Enter a valid email address'),
 }))
-const phoneForm = useForm({ validationSchema: phoneSchema })
-const { value: phoneVal, errorMessage: phoneErr } = useField<string>('phone_number')
-const phoneLoading = ref(false)
+const emailForm = useForm({ validationSchema: emailSchema })
+const { value: emailVal, errorMessage: emailErr } = useField<string>('email')
+const emailLoading = ref(false)
 
-const submitPhone = phoneForm.handleSubmit(async (values) => {
-  phoneLoading.value = true
+const submitEmail = emailForm.handleSubmit(async (values) => {
+  emailLoading.value = true
   try {
-    await authApi.requestOtp({ country_code: COUNTRY_CODE, phone_number: values.phone_number })
-    phoneNumber.value = values.phone_number
+    await authApi.requestOtp({ email: values.email })
+    emailAddress.value = values.email
     step.value = 'otp'
     startTimer()
-    toast.success(`OTP sent to ${COUNTRY_CODE} ${values.phone_number}`)
+    toast.success(`OTP sent to ${values.email}`)
   } catch (e) { toast.error(extractErrorMessage(e)) }
-  finally { phoneLoading.value = false }
+  finally { emailLoading.value = false }
 })
 
 const otpSchema = toTypedSchema(z.object({
@@ -61,7 +61,7 @@ const otpLoading = ref(false)
 const submitOtp = otpForm.handleSubmit(async (values) => {
   otpLoading.value = true
   try {
-    const { is_new_user } = await auth.login(COUNTRY_CODE, phoneNumber.value, values.otp)
+    const { is_new_user } = await auth.login(emailAddress.value, values.otp)
     if (is_new_user) { router.push('/profile-setup') }
     else { router.push((route.query.redirect as string) || '/') }
   } catch (e) { toast.error(extractErrorMessage(e)) }
@@ -71,14 +71,14 @@ const submitOtp = otpForm.handleSubmit(async (values) => {
 async function resendOtp() {
   if (resendCooldown.value > 0) return
   try {
-    await authApi.requestOtp({ country_code: COUNTRY_CODE, phone_number: phoneNumber.value })
+    await authApi.requestOtp({ email: emailAddress.value })
     startTimer()
     toast.success('OTP resent!')
   } catch (e) { toast.error(extractErrorMessage(e)) }
 }
 
 function goBack() {
-  step.value = 'phone'
+  step.value = 'email'
   if (_timer) { clearInterval(_timer); _timer = null }
   resendCooldown.value = 0
   otpForm.resetForm()
@@ -198,13 +198,13 @@ const mockBars = [38, 56, 42, 70, 50, 64, 48]
         <!-- Headline -->
         <div class="text-center mb-7">
           <h1 class="text-2xl font-extrabold text-white mb-1.5">
-            {{ step === 'phone' ? 'Welcome back' : 'Check your phone' }}
+            {{ step === 'email' ? 'Welcome back' : 'Check your inbox' }}
           </h1>
           <p class="text-sm" style="color: rgba(255,255,255,0.5)">
             {{
-              step === 'phone'
-                ? 'Sign in with your phone number to continue.'
-                : `Code sent to ${COUNTRY_CODE} ${phoneNumber}`
+              step === 'email'
+                ? 'Sign in with your email to continue.'
+                : `Code sent to ${emailAddress}`
             }}
           </p>
         </div>
@@ -218,46 +218,38 @@ const mockBars = [38, 56, 42, 70, 50, 64, 48]
           />
         </div>
 
-        <!-- Phone step -->
+        <!-- Email step -->
         <Transition name="slide-up" mode="out-in">
-          <form v-if="step === 'phone'" key="phone" class="space-y-4" @submit.prevent="submitPhone">
+          <form v-if="step === 'email'" key="email" class="space-y-4" @submit.prevent="submitEmail">
             <div>
               <label class="block text-xs font-semibold mb-2 uppercase tracking-wide" style="color:rgba(255,255,255,0.5)">
-                Phone Number
+                Email Address
               </label>
-              <div class="flex gap-2">
-                <div
-                  class="shrink-0 h-11 rounded-xl border px-3 flex items-center text-sm font-medium"
-                  style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.12); color: rgba(255,255,255,0.5)"
-                >
-                  🇮🇳 +91
-                </div>
-                <input
-                  v-model="phoneVal"
-                  type="tel"
-                  inputmode="numeric"
-                  placeholder="9876543210"
-                  autocomplete="tel-national"
-                  class="flex-1 h-11 rounded-xl border px-4 text-sm focus:outline-none transition-all text-white"
-                  :style="phoneErr
-                    ? 'background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.5)'
-                    : 'background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15)'"
-                />
-              </div>
-              <p v-if="phoneErr" class="mt-1.5 text-xs text-red-400">{{ phoneErr }}</p>
+              <input
+                v-model="emailVal"
+                type="email"
+                inputmode="email"
+                placeholder="you@example.com"
+                autocomplete="email"
+                class="w-full h-11 rounded-xl border px-4 text-sm focus:outline-none transition-all text-white"
+                :style="emailErr
+                  ? 'background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.5)'
+                  : 'background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15)'"
+              />
+              <p v-if="emailErr" class="mt-1.5 text-xs text-red-400">{{ emailErr }}</p>
             </div>
 
             <button
               type="submit"
               class="w-full h-12 rounded-xl font-semibold text-sm transition-all active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2 text-white"
               style="background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); box-shadow: 0 4px 20px rgba(124,58,237,0.4)"
-              :disabled="phoneLoading"
+              :disabled="emailLoading"
             >
-              <svg v-if="phoneLoading" class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+              <svg v-if="emailLoading" class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
-              {{ phoneLoading ? 'Sending...' : 'Send OTP' }}
+              {{ emailLoading ? 'Sending...' : 'Send OTP' }}
             </button>
           </form>
 
@@ -267,7 +259,7 @@ const mockBars = [38, 56, 42, 70, 50, 64, 48]
               class="flex items-center justify-between rounded-xl px-4 py-3"
               style="background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3)"
             >
-              <p class="text-sm text-white font-medium">{{ COUNTRY_CODE }} {{ phoneNumber }}</p>
+              <p class="text-sm text-white font-medium">{{ emailAddress }}</p>
               <button
                 type="button"
                 class="text-xs font-semibold"
