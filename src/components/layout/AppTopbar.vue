@@ -26,7 +26,7 @@ const initials = computed(() => {
   const u = auth.user
   if (!u) return '?'
   if (u.first_name) return u.first_name.charAt(0).toUpperCase()
-  return u.phone_number.charAt(0)
+  return u.email.charAt(0).toUpperCase()
 })
 
 // ─── User dropdown ───────────────────────────────────────────────────────────
